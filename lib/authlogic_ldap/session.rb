@@ -26,7 +26,7 @@ module AuthlogicLdap
         config(:ldap_port, value, 389)
       end
       alias_method :ldap_port=, :ldap_port
-      
+
       # Once LDAP authentication has succeeded we need to find the user in the database. By default this just calls the
       # find_by_ldap_login method provided by ActiveRecord. If you have a more advanced set up and need to find users
       # differently specify your own method and define your logic in there.
@@ -108,6 +108,10 @@ module AuthlogicLdap
         def ldap_port
           self.class.ldap_port
         end
+
+				def find_by_ldap_login_method
+					self.class.find_by_ldap_login_method
+				end
     end
   end
 end

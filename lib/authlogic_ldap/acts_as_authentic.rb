@@ -33,6 +33,10 @@ module AuthlogicLdap
       end
       
       private
+				def using_ldap?
+					!ldap_login.blank?
+				end
+
         def validate_ldap
           return if errors.count > 0
           
