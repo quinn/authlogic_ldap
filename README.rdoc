@@ -28,17 +28,17 @@ After installing the plugin, I decide I do not wish to add ldap_user and ldap_pa
 
 I add the following to my User model:
 
-acts_as_authentic do |config|
-  config.validate_ldap_login false
-end
+  acts_as_authentic do |config|
+    config.validate_ldap_login false
+  end
 
 This makes it so that there won't be any validations run on the ldap_login column (because I don't have one).
 
 Next, I edit the UserSession model and add some configuration options:
 
-ldap_host                 'ldapserver.myschool.edu'
-ldap_login_format         "uid=%s,ou=People,o=ldapserver.myschool.edu,o=cp"
-find_by_ldap_login_method :find_by_login
+  ldap_host                 'ldapserver.myschool.edu'
+  ldap_login_format         "uid=%s,ou=People,o=ldapserver.myschool.edu,o=cp"
+  find_by_ldap_login_method :find_by_login
 
 These are likely to be different for your particular setup.  The last config option is to set the ActiveRecord finder for my user to be "find_by_login" because I don't have an ldap_login column.
 
