@@ -1,1 +1,1 @@
-require 'authlogic_ldap"
+require 'authlogic_ldap'

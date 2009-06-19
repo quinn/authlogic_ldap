@@ -14,7 +14,7 @@ module AuthlogicLdap
       # * <tt>Default:</tt> nil
       # * <tt>Accepts:</tt> String
       def ldap_host(value = nil)
-        config(:ldap_host, value)
+        rw_config(:ldap_host, value)
       end
       alias_method :ldap_host=, :ldap_host
       
@@ -23,9 +23,21 @@ module AuthlogicLdap
       # * <tt>Default:</tt> 389
       # * <tt>Accepts:</tt> Fixnum, integer
       def ldap_port(value = nil)
-        config(:ldap_port, value, 389)
+        rw_config(:ldap_port, value, 389)
       end
       alias_method :ldap_port=, :ldap_port
+
+      # The login format (the DN for the username) where the given ldap_login
+      # will replace the '%s' in the string.
+      #
+      # Example: "uid=%s,ou=People,o=myserver.institution.edu,o=cp"
+      #
+      # * <tt>Default:</tt> "%s"
+      # * <tt>Accepts:</tt> String
+      def ldap_login_format(value = nil)
+        rw_config(:ldap_login_format, value, "%s")
+      end
+      alias_method :ldap_login_format=, :ldap_login_format
 
       # Once LDAP authentication has succeeded we need to find the user in the database. By default this just calls the
       # find_by_ldap_login method provided by ActiveRecord. If you have a more advanced set up and need to find users
@@ -42,7 +54,7 @@ module AuthlogicLdap
       # * <tt>Default:</tt> :find_by_ldap_login
       # * <tt>Accepts:</tt> Symbol
       def find_by_ldap_login_method(value = nil)
-        config(:find_by_ldap_login_method, value, :find_by_ldap_login)
+        rw_config(:find_by_ldap_login_method, value, :find_by_ldap_login)
       end
       alias_method :find_by_ldap_login_method=, :find_by_ldap_login_method
     end
@@ -92,7 +104,7 @@ module AuthlogicLdap
           ldap = Net::LDAP.new
           ldap.host = ldap_host
           ldap.port = ldap_port
-          ldap.auth ldap_login, ldap_password
+          ldap.auth ldap_login_format % ldap_login, ldap_password
           if ldap.bind
             self.attempted_record = search_for_record(find_by_ldap_login_method, ldap_login)
             errors.add(:ldap_login, I18n.t('error_messages.ldap_login_not_found', :default => "does not exist")) if attempted_record.blank?
@@ -108,10 +120,14 @@ module AuthlogicLdap
         def ldap_port
           self.class.ldap_port
         end
+        
+        def ldap_login_format
+          self.class.ldap_login_format
+        end
 
-				def find_by_ldap_login_method
-					self.class.find_by_ldap_login_method
-				end
+        def find_by_ldap_login_method
+          self.class.find_by_ldap_login_method
+        end
     end
   end
 end

@@ -14,7 +14,7 @@ module AuthlogicLdap
       # * <tt>Default:</tt> true
       # * <tt>Accepts:</tt> Boolean
       def validate_ldap_login(value = nil)
-        config(:validate_ldap_login, value, true)
+        rw_config(:validate_ldap_login, value, true)
       end
       alias_method :validate_ldap_login=, :validate_ldap_login
     end
@@ -33,9 +33,9 @@ module AuthlogicLdap
       end
       
       private
-				def using_ldap?
-					!ldap_login.blank?
-				end
+        def using_ldap?
+          !ldap_login.blank?
+        end
 
         def validate_ldap
           return if errors.count > 0

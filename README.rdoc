@@ -18,7 +18,31 @@ Authlogic to allow for LDAP authentication.
 
 == INSTALL:
 
-* sudo gem install authlogic-ldap
+* script/plugin install git://github.com/pol/authlogic_ldap.git
+* optionally add ldap user/pass columns to your user model
+* add ldap configuration options to your user and sessions models
+
+== EXAMPLE:
+
+After installing the plugin, I decide I do not wish to add ldap_user and ldap_password columns to my database.
+
+I add the following to my User model:
+
+acts_as_authentic do |config|
+  config.validate_ldap_login false
+end
+
+This makes it so that there won't be any validations run on the ldap_login column (because I don't have one).
+
+Next, I edit the UserSession model and add some configuration options:
+
+ldap_host                 'ldapserver.myschool.edu'
+ldap_login_format         "uid=%s,ou=People,o=ldapserver.myschool.edu,o=cp"
+find_by_ldap_login_method :find_by_login
+
+These are likely to be different for your particular setup.  The last config option is to set the ActiveRecord finder for my user to be "find_by_login" because I don't have an ldap_login column.
+
+And, that should do it.  The system expects that your users exist in the local system *before* they are authenticated to the LDAP server.  This will be made more functional in the future (see the Todo.rdoc for more information.)
 
 == LICENSE:
 
