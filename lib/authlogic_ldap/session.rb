@@ -38,7 +38,20 @@ module AuthlogicLdap
         rw_config(:ldap_login_format, value, "%s")
       end
       alias_method :ldap_login_format=, :ldap_login_format
-
+      
+      # LDAP Encryption configuration settings. Depending on your current LDAP Server
+      # you may need to setup encryption.
+      #
+      # Example: ldap_use_encryption true
+      #
+      # * <tt>Default:</tt> false
+      # * <tt>Accepts:</tt> Boolean
+      def ldap_use_encryption(value = nil)
+        rw_config(:ldap_use_encryption, value, false)
+      end
+      alias_method :ldap_use_encryption=, :ldap_use_encryption
+      
+      
       # Once LDAP authentication has succeeded we need to find the user in the database. By default this just calls the
       # find_by_ldap_login method provided by ActiveRecord. If you have a more advanced set up and need to find users
       # differently specify your own method and define your logic in there.
@@ -65,6 +78,9 @@ module AuthlogicLdap
           attr_accessor :ldap_login
           attr_accessor :ldap_password
           validate :validate_by_ldap, :if => :authenticating_with_ldap?
+        end
+        def ldap_use_encryption
+          self.class.ldap_use_encryption
         end
       end
       
@@ -104,6 +120,7 @@ module AuthlogicLdap
           ldap = Net::LDAP.new
           ldap.host = ldap_host
           ldap.port = ldap_port
+          ldap.encryption = :simple_tls if ldap_use_encryption
           ldap.auth ldap_login_format % ldap_login, ldap_password
           if ldap.bind
             self.attempted_record = search_for_record(find_by_ldap_login_method, ldap_login)
