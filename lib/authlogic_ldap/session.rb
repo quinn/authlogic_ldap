@@ -70,7 +70,65 @@ module AuthlogicLdap
         rw_config(:find_by_ldap_login_method, value, :find_by_ldap_login)
       end
       alias_method :find_by_ldap_login_method=, :find_by_ldap_login_method
+      
+      # If LDAP authentication has succeeded, but the user does not exist in the database, set this to true to have
+      # the the user created in the database. You will need to provide your own method to create the user in the database.
+      # By default, the method name is create_with_ldap_data. Use create_with_ldap_data_method to change.
+      #
+      # For example, to create the user you might do something like:
+      #
+      #   class User < ActiveRecord::Base
+      #     def self.create_with_ldap_data(login, password, ldap_user_data)
+      #       self.create(:login       => login,
+      #                   :password    => password, :password_confirmation => password,
+      #                   :email       => "#{user_data[:mail][0]}",
+      #                   :first_name  => "#{user_data[:givenname][0]}",
+      #                   :last_name   => "#{user_data[:sn][0]}")
+      #     end
+      #   end
+      #
+      # * <tt>Default:</tt> false
+      # * <tt>Accepts:</tt> Boolean
+      def ldap_create_in_database(value = nil)
+        rw_config(:ldap_create_in_database, value, false)
+      end
+      alias_method :ldap_create_in_database=, :ldap_create_in_database
+      
+      # LDAP search base for quering for user data.
+      #
+      # Example: ldap_search_base "ou=People,dc=example,dc=com"
+      #
+      # * <tt>Default:</tt> 
+      # * <tt>Accepts:</tt> String
+      def ldap_search_base(value = nil)
+        rw_config(:ldap_search_base, value, '')
+      end
+      alias_method :ldap_search_base=, :ldap_search_base
+      
+      # LDAP search attribute for quering for user data.
+      #
+      # Example: ldap_search_attribute 'uid'
+      #
+      # * <tt>Default:</tt> 'uid'
+      # * <tt>Accepts:</tt> String
+      def ldap_search_attribute(value = nil)
+        rw_config(:ldap_search_attribute, value, 'uid')
+      end
+      alias_method :ldap_search_attribute=, :ldap_search_attribute
+      
+      # User creation from LDAP data method. Use this to change the method for creating a user
+      # in the local database.
+      #
+      # Example: create_with_ldap_data_method :create_with_ldap_info
+      #
+      # * <tt>Default:</tt> :create_with_ldap_data
+      # * <tt>Accepts:</tt> Symbol
+      def create_with_ldap_data_method(value = nil)
+        rw_config(:create_with_ldap_data_method, value, :create_with_ldap_data)
+      end
+      alias_method :create_with_ldap_data_method=, :create_with_ldap_data_method
     end
+    
     
     module Methods
       def self.included(klass)
@@ -117,17 +175,33 @@ module AuthlogicLdap
           errors.add(:ldap_password, I18n.t('error_messages.ldap_password_blank', :default => "can not be blank")) if ldap_password.blank?
           return if errors.count > 0
           
-          ldap = Net::LDAP.new
-          ldap.host = ldap_host
-          ldap.port = ldap_port
-          ldap.encryption = :simple_tls if ldap_use_encryption
+          ldap = Net::LDAP.new(:host       => ldap_host, 
+                               :port       => ldap_port, 
+                               :encryption => (:simple_tls if ldap_use_encryption) )
+
           ldap.auth ldap_login_format % ldap_login, ldap_password
           if ldap.bind
             self.attempted_record = search_for_record(find_by_ldap_login_method, ldap_login)
-            errors.add(:ldap_login, I18n.t('error_messages.ldap_login_not_found', :default => "does not exist")) if attempted_record.blank?
+            if attempted_record.blank?
+              if ldap_create_in_database  && (user_data = fetch_user_data(ldap_login, ldap_password))
+                self.attempted_record = search_for_record(create_with_ldap_data_method, ldap_login, ldap_password, user_data)
+              else
+                errors.add(:ldap_login, I18n.t('error_messages.ldap_login_not_found', :default => "does not exist"))
+              end
+            end
           else
             errors.add_to_base(ldap.get_operation_result.message)
           end
+        end
+        
+        def fetch_user_data(login,password)
+          ldap = Net::LDAP.new(:host       => ldap_host, 
+                               :port       => ldap_port, 
+                               :encryption => (:simple_tls if ldap_use_encryption),
+                               :base       => ldap_search_base )
+          ldap.authenticate(ldap_login_format % login,password)
+          result = ldap.search(:filter => Net::LDAP::Filter.eq(ldap_search_attribute,login))
+          result[0] if result
         end
         
         def ldap_host
@@ -144,6 +218,22 @@ module AuthlogicLdap
 
         def find_by_ldap_login_method
           self.class.find_by_ldap_login_method
+        end
+        
+        def ldap_create_in_database
+          self.class.ldap_create_in_database
+        end
+        
+        def ldap_search_base
+          self.class.ldap_search_base
+        end
+        
+        def ldap_search_attribute
+          self.class.ldap_search_attribute
+        end
+        
+        def create_with_ldap_data_method
+          self.class.create_with_ldap_data_method
         end
     end
   end

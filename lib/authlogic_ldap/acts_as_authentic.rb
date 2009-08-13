@@ -40,9 +40,9 @@ module AuthlogicLdap
         def validate_ldap
           return if errors.count > 0
           
-          ldap = Net::LDAP.new
-          ldap.host = session_class.ldap_host
-          ldap.port = session_class.ldap_port
+          ldap = Net::LDAP.new(:host => ldap_host, 
+                               :port => ldap_port, 
+                               :encryption => (:simple_tls if ldap_use_encryption) )
           ldap.auth ldap_login, ldap_password
           errors.add_to_base(ldap.get_operation_result.message) if !ldap.bind
         end
