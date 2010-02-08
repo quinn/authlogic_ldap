@@ -183,11 +183,14 @@ module AuthlogicLdap
           if ldap.bind
             self.attempted_record = search_for_record(find_by_ldap_login_method, ldap_login)
             if attempted_record.blank?
-              if ldap_create_in_database  && (user_data = fetch_user_data(ldap_login, ldap_password))
+              if ldap_create_in_database && (user_data = fetch_user_data(ldap_login, ldap_password))
                 self.attempted_record = search_for_record(create_with_ldap_data_method, ldap_login, ldap_password, user_data)
+                
               else
                 errors.add(:ldap_login, I18n.t('error_messages.ldap_login_not_found', :default => "does not exist"))
               end
+            else
+              attempted_record.reset_persistence_token unless attempted_record.persistence_token
             end
           else
             errors.add_to_base(ldap.get_operation_result.message)
